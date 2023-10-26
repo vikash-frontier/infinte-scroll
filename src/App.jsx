@@ -1,35 +1,53 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useCallback, useRef, useState } from "react";
 
-function App() {
-  const [count, setCount] = useState(0)
+import styles from "./index.module.css";
+import useSearch from "./hooks/useSearch";
+
+export default function App() {
+  const [pageNumber, setPageNumber] = useState(1);
+  const { items, hasMore, loading, error } = useSearch(pageNumber);
+  const observer = useRef();
+
+  const lastBookElementRef = useCallback(
+    (node) => {
+      if (loading) return;
+      if (observer.current) observer.current.disconnect();
+      observer.current = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting && hasMore) {
+          setPageNumber((prevPageNumber) => prevPageNumber + 1);
+        }
+      });
+      if (node) {
+        observer.current.observe(node);
+      }
+    },
+    [loading, hasMore]
+  );
 
   return (
     <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+      {items?.map((item, index) => {
+        if (items.length === index + 1) {
+          return (
+            <div
+              className={`${styles["book-title"]}`}
+              ref={lastBookElementRef}
+              key={item}
+            >
+              {item}
+            </div>
+          );
+        } else {
+          return (
+            <div className={`${styles["book-title"]}`} key={item}>
+              {item}
+            </div>
+          );
+        }
+      })}
 
-export default App
+      {loading && <div className={styles.loader}></div>}
+      <div>{error && "Error"}</div>
+    </>
+  );
+}
